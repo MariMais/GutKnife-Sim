@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Skin.Club Gut Knife Simulator</title>
+<style>
+body { font-family:sans-serif; background:#111; color:#eee; text-align:center; margin:0; padding:0; }
+h2 { margin-top:10px; }
+#controls { margin:15px; }
+button { padding:10px 20px; margin:10px; font-size:16px; cursor:pointer; }
+#rollContainer { margin:20px auto; width:90%; max-width:500px; height:120px; overflow:hidden; border:1px solid #444; background:#222; border-radius:8px; position:relative; }
+.rollBar { display:flex; position:absolute; left:0; top:0; transition: transform 1s cubic-bezier(0.25,0.1,0.25,1); }
+.rollItem { display:flex; align-items:center; justify-content:flex-start; padding:5px; min-width:250px; }
+.rollItem img { width:60px; height:40px; margin-right:10px; border-radius:4px; }
+#results { margin-top:20px; max-height:50vh; overflow-y:auto; text-align:left; padding:0 10px; }
+</style>
+</head>
+<body>
+
+<h2>Skin.Club Gut Knife Simulator</h2>
+<div id="controls">
+  Cases: <input type="number" id="cases" value="22" min="1" max="500">
+  <button onclick="startRoll()">Open Cases</button>
+</div>
+
+<div id="rollContainer"><div class="rollBar" id="rollBar"></div></div>
+<div id="results"></div>
+
+<!-- Audio for rolls and knife pop -->
+<audio id="rollSound" src="" preload="auto"></audio>
+<audio id="knifePop" src="" preload="auto"></audio>
+<audio id="rarePop" src="" preload="auto"></audio>
+
+<script>
+// ===================== Skin List =====================
+// Base64 images here (shortened examples, replace with full Base64 for all)
+const items = [
+{name:'Gut Knife | Ultraviolet (MW)', prob:0.002, value:107, img:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'},
+{name:'Gut Knife | Rust Coat (BT)', prob:0.03, value:120, img:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'},
+{name:'M4A4 | Desolate Space (MW)', prob:0.061, value:29.91, img:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'},
+{name:'Glock-18 | Vogue (MW)', prob:0.09, value:6.95, img:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'},
+// Add all other knives and garbage skins similarly
+];
+
+// ===================== Sounds =====================
+// Base64 embedded audio
+const rollSoundSrc = 'data:audio/mp3;base64,//uQxAA...';   // short example
+const knifePopSrc = 'data:audio/mp3;base64,//uQxAA...';
+const rarePopSrc = 'data:audio/mp3;base64,//uQxAA...';
+
+document.getElementById('rollSound').src = rollSoundSrc;
+document.getElementById('knifePop').src = knifePopSrc;
+document.getElementById('rarePop').src = rarePopSrc;
+
+// ===================== RNG =====================
+let cumulativeProbs = [];
+let sum=0;
+for(let i=0;i<items.length;i++){ sum+=items[i].prob; cumulativeProbs.push(sum); }
+function pickItem(){ 
+  let r=Math.random()*cumulativeProbs[cumulativeProbs.length-1]; 
+  for(let i=0;i<cumulativeProbs.length;i++){ if(r<cumulativeProbs[i]) return items[i]; } 
+  return items[items.length-1]; 
+}
+
+// ===================== Roll Logic =====================
+function startRoll(){
+  const n = parseInt(document.getElementById('cases').value);
+  const rollBar = document.getElementById('rollBar');
+  const resultsDiv = document.getElementById('results');
+  rollBar.innerHTML=''; resultsDiv.innerHTML='';
+  
+  let totalValue=0, knives=0, m4a4=0, garbage=0;
+
+  // Generate roll items
+  let rolls=[];
+  for(let i=0;i<n;i++){
+    let drop = pickItem();
+    rolls.push(drop);
+    totalValue += drop.value;
+    if(drop.name.includes('Gut Knife')) knives++;
+    else if(drop.name.includes('M4A4')) m4a4++;
+    else garbage++;
+  }
+
+  // Build roll bar
+  rolls.forEach(r=>{
+    let div = document.createElement('div');
+    div.className='rollItem';
+    div.innerHTML=`<img src="${r.img}" alt="${r.name}"> ${r.name} ($${r.value.toFixed(2)})`;
+    rollBar.appendChild(div);
+  });
+
+  // Animate scrolling like Skin.Club
+  let rollWidth = rollBar.scrollWidth;
+  let containerWidth = document.getElementById('rollContainer').offsetWidth;
+  let finalTransform = -(rollWidth-containerWidth);
+  document.getElementById('rollSound').play();
+  setTimeout(()=>{ rollBar.style.transform=`translateX(${finalTransform}px)`; },50);
+
+  // Stop sound and play knife pop for knives
+  setTimeout(()=>{
+    document.getElementById('rollSound').pause();
+    rolls.forEach(r=>{
+      if(r.name.includes('Gut Knife')) document.getElementById('knifePop').play();
+      else if(r.value>100) document.getElementById('rarePop').play();
+    });
+    resultsDiv.innerHTML=`<b>Total Knives:</b> ${knives}<br>
+                          <b>Total M4A4:</b> ${m4a4}<br>
+                          <b>Total Garbage:</b> ${garbage}<br>
+                          <b>Total Value:</b> $${totalValue.toFixed(2)}<br>
+                          <b>Profit/Loss:</b> $${(totalValue-n*15.54).toFixed(2)}</b>`;
+  },1200); // animation time
+}
+</script>
+</body>
+</html>
